@@ -5,4 +5,6 @@ class Urls {
 
   static final String createDocumentUrl = '$_base/doc/create' ;
   static final String getDocumentUrl = '$_base/docs/me' ;
+  static final String updateDocumentTitleUrl = '$_base/doc/updateTitle' ;
+  static String getDocumentData(String id) => '$_base/doc/$id' ;
 }

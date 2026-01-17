@@ -1,6 +1,7 @@
 const cors = require('cors');
 const express = require("express");
 const mongoose = require("mongoose");
+const http = require('http');
 const authRouter = require("./routes/auth");
 const documentRouter = require("./routes/document");
 
@@ -10,6 +11,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(authRouter);
 app.use(documentRouter) ;
+
+var server = http.createServer(app);
+var io = require("socket.io")(server);
 //MONGOOSE CONNECT
 const uri = "mongodb+srv://najmuschy12:ramim121215@docsclone.npmqul2.mongodb.net/?appName=docsclone";
 const clientOptions = { tls : true, serverApi: { version: '1', strict: true, deprecationErrors: true } };
@@ -33,7 +37,9 @@ run().catch(console.dir);
 
 const PORT = process.env.PORT || 3001 ;
 
-
+io.on('connection', (socket)=>{
+    console.log('connected'+socket.id) ;
+})
 app.listen(PORT, "0.0.0.0", ()=>{
     console.log(`connected at port ${PORT}`)
 

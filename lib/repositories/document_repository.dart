@@ -77,4 +77,57 @@ class DocumentRepository {
     }
   }
 
+  Future<ResponseModel> updateDocumentTitle({required String token, required String id, required String title }) async{
+    ResponseModel responseModel =ResponseModel(errorMessage: null, data: null) ;
+    try{
+      final Uri uri = Uri.parse(Urls.updateDocumentTitleUrl);
+      final Response res = await _client.post(uri, headers:{
+        'Content-type' : 'application/json; charset=UTF-8',
+        'x-auth-token' : token
+      }, body: jsonEncode({
+        'id' : id,
+        'title' : title
+      }));
+      PLog.red('CALLEEEEDDD');
+      PLog.red('STATUS CODE: ${res.statusCode.toString()}');
+
+      switch(res.statusCode){
+        case 200:
+          final responseBody =  jsonDecode(res.body);
+          responseModel = ResponseModel(errorMessage: null, data: 'Title updated') ;
+          return responseModel ;
+        default:
+          throw "Document doesn't exist, create a new one";
+
+      }
+    }catch(e){
+      responseModel = ResponseModel(errorMessage: e.toString(), data: null);
+      return responseModel ;
+    }
+  }
+
+  Future<ResponseModel> getDocumentData({required String token, required String id}) async{
+    ResponseModel responseModel =ResponseModel(errorMessage: null, data: null) ;
+    try{
+      final Uri uri = Uri.parse(Urls.getDocumentData(id));
+      final Response res = await _client.get(uri, headers: {
+        'Content-type' : 'application/json; charset=UTF-8',
+        'x-auth-token' : token
+
+      });
+      switch(res.statusCode){
+        case 200:
+          final responseBody = jsonDecode(res.body);
+          responseModel = ResponseModel(errorMessage: null, data: DocumentModel.fromMap(responseBody['document']));
+          return responseModel;
+        default:
+          throw "Document doesn't exist" ;
+      }
+
+    }catch(e){
+        responseModel = ResponseModel(errorMessage: e.toString(), data: null) ;
+        return responseModel ;
+    }
+  }
+
 }
