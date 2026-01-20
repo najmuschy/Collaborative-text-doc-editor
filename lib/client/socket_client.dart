@@ -9,11 +9,27 @@ class SocketClient {
     socket = IO.io(
       Urls.getUserData,
       IO.OptionBuilder()
-          .setTransports(['websockets'])
-          .disableAutoConnect()
+          .setTransports(['websocket', 'polling'])  // ✅ Try both transports
+          .enableForceNewConnection()  // ✅ Force new connection
+          .enableReconnection()  // ✅ Enable reconnection
+          .setReconnectionAttempts(3)
+          .setReconnectionDelay(1000)
           .build(),
     );
+    socket!.onConnect((_) {
+      print('Connected to WebSocket');
+    });
+
+    socket!.onConnectError((data) {
+      print('Connection Error: $data');
+    });
+
+    socket!.onDisconnect((_) {
+      print('Disconnected from WebSocket');
+    });
+
     socket!.connect();
+
   }
   static SocketClient get instance {
     _instance ??= SocketClient._internal();

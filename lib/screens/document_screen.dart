@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:dart_quill_delta/dart_quill_delta.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_doc/colors.dart';
@@ -26,6 +28,9 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
   final TextEditingController _titleController = TextEditingController(
     text: 'Untitled Document',
   );
+
+  quill.QuillController? _textEditingController;
+
   void _onTitleChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 2000), () {
@@ -36,8 +41,20 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
   @override
   void initState() {
     // TODO: implement initState
-    super.initState();
+
+    socketRepository.joinRoom(widget.id);
     getDocumentData();
+    socketRepository.changeListener(
+      (data) => {
+        _textEditingController?.compose(
+          Delta.fromJson(data['delta']),
+          _textEditingController?.selection ??
+              const TextSelection.collapsed(offset: 0),
+          quill.ChangeSource.remote,
+        ),
+      },
+    );
+    super.initState();
   }
 
   void updateDocumentTitle(String value, WidgetRef ref) {
@@ -57,17 +74,46 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
         .getDocumentData(token: ref.read(userProvider)!.token!, id: widget.id);
     if (responseModel != null && responseModel.data != null) {
       _titleController.text = (responseModel!.data as DocumentModel).title;
+      _textEditingController = quill.QuillController(
+        document: responseModel.data.content.isEmpty
+            ? quill.Document()
+            : quill.Document.fromDelta(
+                Delta.fromJson((responseModel.data as DocumentModel).content),
+              ),
+        selection: const TextSelection.collapsed(offset: 0),
+      );
     } else {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(responseModel.errorMessage!)));
     }
+
+    setState(() {});
+
+    _textEditingController!.document.changes.listen((event){
+      if(event.source == quill.ChangeSource.local){
+        Map<String, dynamic> map ={
+          'delta' : event.change ,
+          'room' : widget.id
+        };
+      socketRepository.typing(map);
+      }
+    });
+
+
+
+    Timer.periodic(const Duration(seconds: 2), (timer) {
+      socketRepository.autoSave({
+        'delta': _textEditingController!.document.toDelta(),
+        'room': widget.id
+      });
+    });
+
   }
 
-  final quill.QuillController _textEditorController =
-      quill.QuillController.basic();
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         actions: [
@@ -91,7 +137,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             quill.QuillSimpleToolbar(
-              controller: _textEditorController,
+              controller: _textEditingController!,
               config: const quill.QuillSimpleToolbarConfig(),
             ),
             Expanded(child: buildQuillEditor()),
@@ -117,7 +163,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
               color: kWhiteColor,
               elevation: 5,
               child: quill.QuillEditor.basic(
-                controller: _textEditorController,
+                controller: _textEditingController!,
                 config: quill.QuillEditorConfig(
                   minHeight: double.infinity,
                   showCursor: true,
@@ -133,7 +179,11 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
 
   ElevatedButton buildShareButton() {
     return ElevatedButton.icon(
-      onPressed: () {},
+      onPressed: () {
+        Clipboard.setData(ClipboardData(text: 'http://localhost:3000/#/doc/${widget.id}')).then((value){
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Link copied to clipboard')));
+        });
+      },
       label: Text('Share', style: TextStyle(color: Colors.white, fontSize: 13)),
       icon: Icon(Icons.lock, color: Colors.white),
       style: ElevatedButton.styleFrom(
@@ -168,7 +218,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        onChanged: _onTitleChanged
+        onChanged: _onTitleChanged,
       ),
     );
   }

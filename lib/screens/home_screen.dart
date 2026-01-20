@@ -82,7 +82,7 @@ class HomeScreen extends ConsumerWidget {
                       onTap: ()=>navigateToDocument(context, documentModel.id),
                       child: Card(
                           child: ListTile(
-                            title: Text(documentModel.title),
+                            title: Center(child: Text(documentModel.title)),
                           )
                       ),
                     );

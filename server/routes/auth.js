@@ -22,14 +22,13 @@ authRouter.post('/api/signup', async (req, res)=>{
         const token = jwt.sign({id:user._id},'passwordKey');
         res.json({user, token}) ;
     }catch(e){
-    console.error(e);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 authRouter.get('/',auth,async(req,res)=>{
     const user = await User.findById(req.user);
-    console.log(user)
+
     res.json({user, token: req.token});
 })
 

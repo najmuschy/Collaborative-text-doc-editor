@@ -43,6 +43,7 @@ dependencies:
   pretty_logger: ^1.0.0
   routemaster: ^1.0.1
   flutter_quill: ^11.5.0
+  dart_quill_delta: ^10.8.3
   socket_io_client: ^3.1.4
 dev_dependencies:
   flutter_test:
